@@ -45,7 +45,7 @@ import type { BigNumberish, BytesLike } from "../utils/index.js";
 import type { Listener } from "../utils/index.js";
 
 import type { Networkish } from "./network.js";
-import type { FetchUrlFeeDataNetworkPlugin } from "./plugins-network.js";
+import { FetchUrlFeeDataNetworkPlugin, TransactionPlugin } from "./plugins-network.js";
 //import type { MaxPriorityFeePlugin } from "./plugins-network.js";
 import type {
     BlockParams, LogParams, TransactionReceiptParams,
@@ -1085,7 +1085,14 @@ export class AbstractProvider implements Provider {
              network: this.getNetwork()
         });
 
-        const tx = Transaction.from(signedTx);
+        let tx: Transaction;
+        const transactionPlugin = (await this.provider.getNetwork()).getPlugin<TransactionPlugin>(TransactionPlugin.NAME);
+        if (transactionPlugin) {
+            tx = transactionPlugin.create(signedTx);
+        } else {
+            tx = Transaction.from(signedTx);
+        }
+
         if (tx.hash !== hash) {
             throw new Error("@TODO: the returned hash did not match");
         }

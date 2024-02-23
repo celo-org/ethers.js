@@ -10,6 +10,7 @@ import type { SigningKey } from "../crypto/index.js";
 import type { TypedDataDomain, TypedDataField } from "../hash/index.js";
 import type { Provider, TransactionRequest } from "../providers/index.js";
 import type { TransactionLike } from "../transaction/index.js";
+import { TransactionPlugin } from "../providers/plugins-network.js";
 
 
 /**
@@ -86,7 +87,20 @@ export class BaseWallet extends AbstractSigner {
         }
 
         // Build the transaction
-        const btx = Transaction.from(<TransactionLike<string>>tx);
+        let btx: Transaction;
+
+        if (this.provider) {
+            const transactionPlugin = (await this.provider.getNetwork()).getPlugin<TransactionPlugin>(TransactionPlugin.NAME);
+
+            if (transactionPlugin) {
+                btx = transactionPlugin.create(<TransactionLike<string>>tx);
+            } else {
+                btx = Transaction.from(<TransactionLike<string>>tx);
+            }
+        } else {
+            btx = Transaction.from(<TransactionLike<string>>tx);
+        }
+
         btx.signature = this.signingKey.sign(btx.unsignedHash);
 
         return btx.serialized;

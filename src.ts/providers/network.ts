@@ -16,7 +16,7 @@ import type { BigNumberish } from "../utils/index.js";
 import type { TransactionLike } from "../transaction/index.js";
 
 import type { NetworkPlugin } from "./plugins-network.js";
-
+import { CeloRpcInterceptorPlugin, CeloTransactionPlugin } from "../chain/celo.js";
 
 /**
  *  A Networkish can be used to allude to a Network, by specifing:
@@ -430,4 +430,11 @@ function injectCommonNetworks(): void {
     registerEth("optimism-sepolia", 11155420, { });
 
     registerEth("xdai", 100, { ensNetwork: 1 });
+
+    registerEth("celo-alfajores", 44787, {
+        plugins: [
+            new CeloTransactionPlugin(),
+            new CeloRpcInterceptorPlugin()
+        ]
+    });
 }
