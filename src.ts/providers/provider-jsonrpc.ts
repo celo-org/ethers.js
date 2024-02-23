@@ -38,6 +38,7 @@ import type { PerformActionRequest, Subscriber, Subscription } from "./abstract-
 import type { Networkish } from "./network.js";
 import type { Provider, TransactionRequest, TransactionResponse } from "./provider.js";
 import type { Signer } from "./signer.js";
+import { RpcInterceptorPlugin } from "./plugins-network.js";
 
 type Timer = ReturnType<typeof setTimeout>;
 
@@ -197,6 +198,11 @@ export type JsonRpcApiProviderOptions = {
     cacheTimeout?: number;
     pollingInterval?: number;
 };
+
+export type JsonRpcRequestBody = { 
+    method: string, 
+    args: Array<any> 
+}
 
 const defaultOptions = {
     polling: false,
@@ -668,9 +674,13 @@ export abstract class JsonRpcApiProvider extends AbstractProvider {
             }
         }
 
-        const request = this.getRpcRequest(req);
-
+        let request = this.getRpcRequest(req);
         if (request != null) {
+            const rpcInterceptorPlugin = this.#network?.getPlugin<RpcInterceptorPlugin>(RpcInterceptorPlugin.NAME);
+            if (rpcInterceptorPlugin) {
+                request = rpcInterceptorPlugin.intercept(request, req);
+            }
+
             return await this.send(request.method, request.args);
         }
 
@@ -852,7 +862,7 @@ export abstract class JsonRpcApiProvider extends AbstractProvider {
      *  Returns the request method and arguments required to perform
      *  %%req%%.
      */
-    getRpcRequest(req: PerformActionRequest): null | { method: string, args: Array<any> } {
+    getRpcRequest(req: PerformActionRequest): null | JsonRpcRequestBody {
         switch (req.method) {
             case "chainId":
                 return { method: "eth_chainId", args: [ ] };

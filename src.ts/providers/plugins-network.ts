@@ -2,8 +2,11 @@ import { defineProperties } from "../utils/properties.js";
 
 import { assertArgument } from "../utils/index.js";
 
-import type { FeeData, Provider } from "./provider.js";
+import type { FeeData, Provider, TransactionRequest } from "./provider.js";
 import type { FetchRequest } from "../utils/fetch.js";
+import { Transaction, TransactionLike } from "../transaction/transaction.js";
+import { JsonRpcRequestBody } from "./provider-jsonrpc.js";
+import { PerformActionRequest } from "./abstract-provider.js";
 
 
 const EnsAddress = "0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e";
@@ -279,3 +282,25 @@ export class CustomBlockNetworkPlugin extends NetworkPlugin {
     }
 }
 */
+
+
+export abstract class TransactionPlugin extends NetworkPlugin {
+    public static NAME = "org.ethers.plugins.network.Transaction";
+
+    constructor() {
+        super(TransactionPlugin.NAME);
+    }
+
+    public abstract create(from?: string | TransactionLike<string>): Transaction;
+    public abstract determineType(tx: TransactionRequest): number | null | undefined;
+}
+
+export abstract class RpcInterceptorPlugin extends NetworkPlugin {
+    public static NAME = "org.ethers.plugins.network.RpcInterceptor";
+
+    constructor() {
+        super(RpcInterceptorPlugin.NAME);
+    }
+
+    public abstract intercept(request: JsonRpcRequestBody, context: PerformActionRequest): JsonRpcRequestBody;
+}

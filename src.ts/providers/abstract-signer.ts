@@ -21,7 +21,7 @@ import type {
     BlockTag, Provider, TransactionRequest, TransactionResponse
 } from "./provider.js";
 import type { Signer } from "./signer.js";
-
+import { TransactionPlugin } from "./plugins-network.js";
 
 function checkProvider(signer: AbstractSigner, operation: string): Provider {
     if (signer.provider) { return signer.provider; }
@@ -206,6 +206,13 @@ export abstract class AbstractSigner<P extends null | Provider = null | Provider
                     pop.maxPriorityFeePerGas = feeData.maxPriorityFeePerGas;
                 }
             }
+
+            const transactionPlugin = network.getPlugin<TransactionPlugin>(TransactionPlugin.NAME);
+            
+            if (transactionPlugin) {
+                // TODO: Maybe this could be more generic (postprocess)
+                pop.type = transactionPlugin.determineType(tx);
+            }
         }
 
 //@TOOD: Don't await all over the place; save them up for
@@ -231,7 +238,15 @@ export abstract class AbstractSigner<P extends null | Provider = null | Provider
 
         const pop = await this.populateTransaction(tx);
         delete pop.from;
-        const txObj = Transaction.from(pop);
+
+        let txObj;
+        const transactionPlugin = (await provider.getNetwork()).getPlugin<TransactionPlugin>(TransactionPlugin.NAME);
+        if (transactionPlugin) {
+            txObj = transactionPlugin.create(pop);
+        } else {
+            txObj = Transaction.from(pop);
+        }
+        
         return await provider.broadcastTransaction(await this.signTransaction(txObj));
     }
 
