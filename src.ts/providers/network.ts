@@ -13,10 +13,11 @@ import {
 } from "./plugins-network.js";
 
 import type { BigNumberish } from "../utils/index.js";
-import type { TransactionLike } from "../transaction/index.js";
+import type { Transaction, TransactionLike } from "../transaction/index.js";
 
 import type { NetworkPlugin } from "./plugins-network.js";
 
+import { PreparedTransactionRequest, TransactionRequest } from "./provider.js";
 
 /**
  *  A Networkish can be used to allude to a Network, by specifing:
@@ -57,6 +58,15 @@ export class LayerOneConnectionPlugin extends NetworkPlugin {
 
 const Networks: Map<string | bigint, () => Network> = new Map();
 
+export type NetworkOverrides = {
+    prepareTransactionRequest?: (tx: TransactionRequest) => PreparedTransactionRequest;
+    populateTransaction?: (tx: TransactionRequest) => TransactionLike;
+    createTransaction?: (from: TransactionLike) => Transaction;
+}
+
+export type NetworkDefaults = {
+    populateTransaction: (tx: TransactionRequest) => TransactionLike;    
+}
 
 /**
  *  A **Network** provides access to a chain's properties and allows

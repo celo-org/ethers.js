@@ -111,12 +111,12 @@ export interface TransactionLike<A = string> {
     blobVersionedHashes?: null | Array<string>;
 }
 
-function handleAddress(value: string): null | string {
+export function handleAddress(value: string): null | string {
     if (value === "0x") { return null; }
     return getAddress(value);
 }
 
-function handleAccessList(value: any, param: string): AccessList {
+export function handleAccessList(value: any, param: string): AccessList {
     try {
         return accessListify(value);
     } catch (error: any) {
@@ -124,26 +124,26 @@ function handleAccessList(value: any, param: string): AccessList {
     }
 }
 
-function handleNumber(_value: string, param: string): number {
+export function handleNumber(_value: string, param: string): number {
     if (_value === "0x") { return 0; }
     return getNumber(_value, param);
 }
 
-function handleUint(_value: string, param: string): bigint {
+export function handleUint(_value: string, param: string): bigint {
     if (_value === "0x") { return BN_0; }
     const value = getBigInt(_value, param);
     assertArgument(value <= BN_MAX_UINT, "value exceeds uint size", param, value);
     return value;
 }
 
-function formatNumber(_value: BigNumberish, name: string): Uint8Array {
+export function formatNumber(_value: BigNumberish, name: string): Uint8Array {
     const value = getBigInt(_value, "value");
     const result = toBeArray(value);
     assertArgument(result.length <= 32, `value too large`, `tx.${ name }`, value);
     return result;
 }
 
-function formatAccessList(value: AccessListish): Array<[ string, Array<string> ]> {
+export function formatAccessList(value: AccessListish): Array<[ string, Array<string> ]> {
     return accessListify(value).map((set) => [ set.address, set.storageKeys ]);
 }
 
@@ -263,7 +263,7 @@ function _serializeLegacy(tx: Transaction, sig?: Signature): string {
     return encodeRlp(fields);
 }
 
-function _parseEipSignature(tx: TransactionLike, fields: Array<string>): void {
+export function parseEipSignature(tx: TransactionLike, fields: Array<string>): void {
     let yParity: number;
     try {
         yParity = handleNumber(fields[0], "yParity");
@@ -304,7 +304,7 @@ function _parseEip1559(data: Uint8Array): TransactionLike {
 
     tx.hash = keccak256(data);
 
-    _parseEipSignature(tx, fields.slice(9));
+    parseEipSignature(tx, fields.slice(9));
 
     return tx;
 }
@@ -354,7 +354,7 @@ function _parseEip2930(data: Uint8Array): TransactionLike {
 
     tx.hash = keccak256(data);
 
-    _parseEipSignature(tx, fields.slice(8));
+    parseEipSignature(tx, fields.slice(8));
 
     return tx;
 }
@@ -414,7 +414,7 @@ function _parseEip4844(data: Uint8Array): TransactionLike {
 
     tx.hash = keccak256(data);
 
-    _parseEipSignature(tx, fields.slice(11));
+    parseEipSignature(tx, fields.slice(11));
 
     return tx;
 }

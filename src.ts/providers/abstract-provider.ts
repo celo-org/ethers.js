@@ -1085,6 +1085,7 @@ export class AbstractProvider implements Provider {
              network: this.getNetwork()
         });
 
+        // TODO: add network overrides here
         const tx = Transaction.from(signedTx);
         if (tx.hash !== hash) {
             throw new Error("@TODO: the returned hash did not match");

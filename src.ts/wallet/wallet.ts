@@ -12,10 +12,11 @@ import {
 import { Mnemonic } from "./mnemonic.js";
 
 import type { ProgressCallback } from "../crypto/index.js";
-import type { Provider } from "../providers/index.js";
+import type { Provider, TransactionRequest } from "../providers/index.js";
 
 import type { CrowdsaleAccount } from "./json-crowdsale.js";
 import type { KeystoreAccount } from "./json-keystore.js";
+import { NetworkOverrides } from "../providers/network.js";
 
 
 function stall(duration: number): Promise<void> {
@@ -32,19 +33,19 @@ function stall(duration: number): Promise<void> {
  *  raw private key, [[link-bip-39]] mnemonics and encrypte JSON
  *  wallets.
  */
-export class Wallet extends BaseWallet {
+export class Wallet<TNetworkOverrides extends NetworkOverrides = {}> extends BaseWallet<TNetworkOverrides> {
 
     /**
      *  Create a new wallet for the private %%key%%, optionally connected
      *  to %%provider%%.
      */
-    constructor(key: string | SigningKey, provider?: null | Provider) {
+    constructor(key: string | SigningKey, provider?: null | Provider, networkOverrides?: TNetworkOverrides) {
         if (typeof(key) === "string" && !key.startsWith("0x")) {
             key = "0x" + key;
         }
 
         let signingKey = (typeof(key) === "string") ? new SigningKey(key): key;
-        super(signingKey, provider);
+        super(signingKey, provider, networkOverrides);
     }
 
     connect(provider: null | Provider): Wallet {
@@ -160,4 +161,9 @@ export class Wallet extends BaseWallet {
         if (provider) { return wallet.connect(provider); }
         return wallet;
     }
+}
+
+// TODO networkOverrides should be optional
+export const createWallet = <networkOverrides extends NetworkOverrides>(privateKey: string, provider: Provider, networkOverrides: networkOverrides) => {
+    return new Wallet<typeof networkOverrides>(privateKey, provider, networkOverrides);
 }
