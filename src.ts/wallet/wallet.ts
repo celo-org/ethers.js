@@ -12,7 +12,7 @@ import {
 import { Mnemonic } from "./mnemonic.js";
 
 import type { ProgressCallback } from "../crypto/index.js";
-import type { Provider, TransactionRequest } from "../providers/index.js";
+import type { Provider } from "../providers/index.js";
 
 import type { CrowdsaleAccount } from "./json-crowdsale.js";
 import type { KeystoreAccount } from "./json-keystore.js";

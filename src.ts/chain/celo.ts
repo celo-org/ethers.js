@@ -22,7 +22,7 @@ interface CeloPreparedTransactionRequest extends PreparedTransactionRequest {
 }
 
 export class Cip64Transaction extends Transaction {
-    #feeCurrency: string;
+    #feeCurrency: string = "";
 
     set feeCurrency(value: string) {
         this.#feeCurrency = getAddress(value);
@@ -122,7 +122,7 @@ export const celoAlfajores = {
 
         return result;
     },
-    createTransaction: (from: TransactionLike | string) => {
+    createTransaction: (from: TransactionLike | string): Transaction => {
         if (!from) {
             return new Transaction();
         }
