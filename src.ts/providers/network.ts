@@ -18,6 +18,8 @@ import type { Transaction, TransactionLike } from "../transaction/index.js";
 import type { NetworkPlugin } from "./plugins-network.js";
 
 import { PreparedTransactionRequest, TransactionRequest } from "./provider.js";
+import { JsonRpcRequestBody } from "./provider-jsonrpc.js";
+import { PerformActionRequest } from "./abstract-provider.js";
 
 /**
  *  A Networkish can be used to allude to a Network, by specifing:
@@ -61,7 +63,8 @@ const Networks: Map<string | bigint, () => Network> = new Map();
 export type NetworkOverrides = {
     prepareTransactionRequest?: (tx: TransactionRequest) => PreparedTransactionRequest;
     populateTransaction?: (tx: TransactionRequest) => TransactionLike;
-    createTransaction?: (from: TransactionLike) => Transaction;
+    createTransaction?: (from: TransactionLike | string) => Transaction;
+    getRpcRequest?: (request: JsonRpcRequestBody | null, context: PerformActionRequest) => JsonRpcRequestBody | null;
 }
 
 export type NetworkDefaults = {

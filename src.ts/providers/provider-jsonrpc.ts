@@ -35,7 +35,7 @@ import type { TypedDataDomain, TypedDataField } from "../hash/index.js";
 import type { TransactionLike } from "../transaction/index.js";
 
 import type { PerformActionRequest, Subscriber, Subscription } from "./abstract-provider.js";
-import type { Networkish } from "./network.js";
+import type { NetworkOverrides, Networkish } from "./network.js";
 import type { Provider, TransactionRequest, TransactionResponse } from "./provider.js";
 import type { Signer } from "./signer.js";
 
@@ -197,6 +197,11 @@ export type JsonRpcApiProviderOptions = {
     cacheTimeout?: number;
     pollingInterval?: number;
 };
+
+export type JsonRpcRequestBody = { 
+    method: string, 
+    args: Array<any> 
+}
 
 const defaultOptions = {
     polling: false,
@@ -482,7 +487,7 @@ type Payload = { payload: JsonRpcPayload, resolve: ResolveFunc, reject: RejectFu
  *  - a sub-class MUST override _send
  *  - a sub-class MUST call the `_start()` method once connected
  */
-export abstract class JsonRpcApiProvider extends AbstractProvider {
+export abstract class JsonRpcApiProvider<TNetworkOverrides extends NetworkOverrides = {}> extends AbstractProvider<TNetworkOverrides> {
 
     #options: Required<JsonRpcApiProviderOptions>;
 
@@ -581,8 +586,8 @@ export abstract class JsonRpcApiProvider extends AbstractProvider {
         }, stallTime);
     }
 
-    constructor(network?: Networkish, options?: JsonRpcApiProviderOptions) {
-        super(network, options);
+    constructor(network?: Networkish, options?: JsonRpcApiProviderOptions, networkOverrides?: TNetworkOverrides) {
+        super(network, options, networkOverrides);
 
         this.#nextId = 1;
         this.#options = Object.assign({ }, defaultOptions, options || { });
@@ -649,7 +654,6 @@ export abstract class JsonRpcApiProvider extends AbstractProvider {
      *  and should generally call ``super._perform`` as a fallback.
      */
     async _perform(req: PerformActionRequest): Promise<any> {
-
         // Legacy networks do not like the type field being passed along (which
         // is fair), so we delete type if it is 0 and a non-EIP-1559 network
         if (req.method === "call" || req.method === "estimateGas") {
@@ -668,7 +672,9 @@ export abstract class JsonRpcApiProvider extends AbstractProvider {
             }
         }
 
-        const request = this.getRpcRequest(req);
+        let request = this.networkOverrides && this.networkOverrides.getRpcRequest 
+            ? this.networkOverrides.getRpcRequest(this.getRpcRequest(req), req)
+            : this.getRpcRequest(req);
 
         if (request != null) {
             return await this.send(request.method, request.args);
@@ -852,7 +858,7 @@ export abstract class JsonRpcApiProvider extends AbstractProvider {
      *  Returns the request method and arguments required to perform
      *  %%req%%.
      */
-    getRpcRequest(req: PerformActionRequest): null | { method: string, args: Array<any> } {
+    getRpcRequest(req: PerformActionRequest): null | JsonRpcRequestBody {
         switch (req.method) {
             case "chainId":
                 return { method: "eth_chainId", args: [ ] };
@@ -1157,10 +1163,10 @@ export abstract class JsonRpcApiProvider extends AbstractProvider {
 /**
  *  @_ignore:
  */
-export abstract class JsonRpcApiPollingProvider extends JsonRpcApiProvider {
+export abstract class JsonRpcApiPollingProvider<TNetworkOverrides extends NetworkOverrides = {}> extends JsonRpcApiProvider<TNetworkOverrides> {
     #pollingInterval: number;
-    constructor(network?: Networkish, options?: JsonRpcApiProviderOptions) {
-        super(network, options);
+    constructor(network?: Networkish, options?: JsonRpcApiProviderOptions, networkOverrides?: TNetworkOverrides) {
+        super(network, options, networkOverrides);
 
         this.#pollingInterval = 4000;
     }
@@ -1196,12 +1202,12 @@ export abstract class JsonRpcApiPollingProvider extends JsonRpcApiProvider {
  *  number; when it advances, all block-base events are then checked
  *  for updates.
  */
-export class JsonRpcProvider extends JsonRpcApiPollingProvider {
+export class JsonRpcProvider<TNetworkOverrides extends NetworkOverrides = {}> extends JsonRpcApiPollingProvider<TNetworkOverrides> {
     #connect: FetchRequest;
 
-    constructor(url?: string | FetchRequest, network?: Networkish, options?: JsonRpcApiProviderOptions) {
+    constructor(url?: string | FetchRequest, network?: Networkish, options?: JsonRpcApiProviderOptions, networkOverrides?: TNetworkOverrides) {
         if (url == null) { url = "http:/\/localhost:8545"; }
-        super(network, options);
+        super(network, options, networkOverrides);
 
         if (typeof(url) === "string") {
             this.#connect = new FetchRequest(url);

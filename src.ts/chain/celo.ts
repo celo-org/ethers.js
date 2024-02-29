@@ -1,6 +1,7 @@
 import { AddressLike, getAddress } from "../address";
 import { Signature, keccak256 } from "../crypto";
-import { PreparedTransactionRequest, TransactionRequest } from "../providers";
+import { PerformActionRequest, PreparedTransactionRequest, TransactionRequest } from "../providers";
+import { JsonRpcRequestBody } from "../providers/provider-jsonrpc";
 import { Transaction, TransactionLike } from "../transaction";
 import { formatAccessList, formatNumber, handleAccessList, handleAddress, handleNumber, handleUint, parseEipSignature } from "../transaction/transaction";
 import { assert, assertArgument, concat, decodeRlp, encodeRlp, getBytes, hexlify, toBeArray } from "../utils";
@@ -24,7 +25,6 @@ export class Cip64Transaction extends Transaction {
     #feeCurrency: string;
 
     set feeCurrency(value: string) {
-        // TODO check if that's sufficient
         this.#feeCurrency = getAddress(value);
     }
 
@@ -117,13 +117,12 @@ export const celoAlfajores = {
         const result: CeloPreparedTransactionRequest = {};
         
         if (request.feeCurrency) {
-            // TODO check if that's sufficient
             result.feeCurrency = getAddress(request.feeCurrency);
         }
 
         return result;
     },
-    createTransaction: (from: TransactionLike) => {
+    createTransaction: (from: TransactionLike | string) => {
         if (!from) {
             return new Transaction();
         }
@@ -164,5 +163,16 @@ export const celoAlfajores = {
 
         // Fallback to default
         return Transaction.from(<TransactionLike<string>>from);
+    },
+    getRpcRequest: (request: JsonRpcRequestBody | null, context: PerformActionRequest): JsonRpcRequestBody | null => {
+        if (request !== null
+            && request.method === "eth_estimateGas" 
+            && context.method === "estimateGas"
+            && (context.transaction as CeloTransactionRequest).feeCurrency
+        ) {
+            request.args[0].feeCurrency = (context.transaction as CeloTransactionRequest).feeCurrency;
+        }
+
+        return request;
     }
 }

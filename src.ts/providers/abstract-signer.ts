@@ -48,13 +48,6 @@ async function populate(signer: AbstractSigner, tx: TransactionRequest, networkO
         pop.from = signer.getAddress();
     }
 
-    if (networkOverrides && networkOverrides.populateTransaction) {
-        return await resolveProperties({
-            ...pop,
-            ...networkOverrides.populateTransaction(tx)
-        });
-    }
-
     return await resolveProperties(pop);
 }
 
