@@ -4,6 +4,7 @@ import type { TypedDataDomain, TypedDataField } from "../hash/index.js";
 import type { TransactionLike } from "../transaction/index.js";
 
 import type { ContractRunner } from "./contracts.js";
+import { NetworkDefaults, NetworkOverrides } from "./network.js";
 import type { BlockTag, Provider, TransactionRequest, TransactionResponse } from "./provider.js";
 
 /**
@@ -14,7 +15,7 @@ import type { BlockTag, Provider, TransactionRequest, TransactionResponse } from
  *  Signing entities, such as Smart Contract Wallets or Virtual Wallets (where the
  *  private key may not be known).
  */
-export interface Signer extends Addressable, ContractRunner, NameResolver {
+export interface Signer<TNetworkOverrides extends NetworkOverrides = NetworkDefaults> extends Addressable, ContractRunner, NameResolver {
 
     /**
      *  The [[Provider]] attached to this Signer (if any).
@@ -128,7 +129,11 @@ export interface Signer extends Addressable, ContractRunner, NameResolver {
      *  is called first to ensure all necessary properties for the
      *  transaction to be valid have been popualted first.
      */
-    sendTransaction(tx: TransactionRequest): Promise<TransactionResponse>;
+    sendTransaction(
+        tx: TNetworkOverrides["populateTransaction"] extends (tx: TransactionRequest) => TransactionLike
+            ? Parameters<TNetworkOverrides["populateTransaction"]>[0]
+            : Parameters<NetworkDefaults["populateTransaction"]>[0] 
+    ): Promise<TransactionResponse>;
 
     /**
      *  Signs an [[link-eip-191]] prefixed personal message.

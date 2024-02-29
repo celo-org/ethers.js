@@ -44,7 +44,7 @@ import type { Addressable, AddressLike } from "../address/index.js";
 import type { BigNumberish, BytesLike } from "../utils/index.js";
 import type { Listener } from "../utils/index.js";
 
-import type { Networkish } from "./network.js";
+import type { Networkish, NetworkOverrides } from "./network.js";
 import type { FetchUrlFeeDataNetworkPlugin } from "./plugins-network.js";
 //import type { MaxPriorityFeePlugin } from "./plugins-network.js";
 import type {
@@ -443,7 +443,7 @@ type CcipArgs = {
  *  formatting output results as well as tracking events for consistent
  *  behaviour on an eventually-consistent network.
  */
-export class AbstractProvider implements Provider {
+export class AbstractProvider<TNetworkOverrides extends NetworkOverrides = {}> implements Provider {
 
     #subs: Map<string, Sub>;
     #plugins: Map<string, AbstractProviderPlugin>;
@@ -468,12 +468,14 @@ export class AbstractProvider implements Provider {
 
     #options: Required<AbstractProviderOptions>;
 
+    protected networkOverrides?: TNetworkOverrides;
+
     /**
      *  Create a new **AbstractProvider** connected to %%network%%, or
      *  use the various network detection capabilities to discover the
      *  [[Network]] if necessary.
      */
-    constructor(_network?: "any" | Networkish, options?: AbstractProviderOptions) {
+    constructor(_network?: "any" | Networkish, options?: AbstractProviderOptions, networkOverrides?: TNetworkOverrides) {
         this.#options = Object.assign({ }, defaultOptions, options || { });
 
         if (_network === "any") {
@@ -503,6 +505,7 @@ export class AbstractProvider implements Provider {
         this.#timers = new Map();
 
         this.#disableCcipRead = false;
+        this.networkOverrides = networkOverrides;
     }
 
     get pollingInterval(): number { return this.#options.pollingInterval; }
@@ -823,7 +826,7 @@ export class AbstractProvider implements Provider {
      *  transaction.
      */
     _getTransactionRequest(_request: TransactionRequest): PerformActionTransaction | Promise<PerformActionTransaction> {
-        const request = <PerformActionTransaction>copyRequest(_request);
+        const request = <PerformActionTransaction>copyRequest(_request, this.networkOverrides);
 
         const promises: Array<Promise<void>> = [ ];
         [ "to", "from" ].forEach((key) => {
@@ -1085,7 +1088,9 @@ export class AbstractProvider implements Provider {
              network: this.getNetwork()
         });
 
-        const tx = Transaction.from(signedTx);
+        const tx = this.networkOverrides && this.networkOverrides.createTransaction
+            ? this.networkOverrides.createTransaction(signedTx)
+            : Transaction.from(signedTx)
         if (tx.hash !== hash) {
             throw new Error("@TODO: the returned hash did not match");
         }

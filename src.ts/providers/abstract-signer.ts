@@ -22,14 +22,15 @@ import type {
 } from "./provider.js";
 import type { Signer } from "./signer.js";
 
+import { NetworkDefaults, NetworkOverrides } from "./network.js";
 
 function checkProvider(signer: AbstractSigner, operation: string): Provider {
     if (signer.provider) { return signer.provider; }
     assert(false, "missing provider", "UNSUPPORTED_OPERATION", { operation });
 }
 
-async function populate(signer: AbstractSigner, tx: TransactionRequest): Promise<TransactionLike<string>> {
-    let pop: any = copyRequest(tx);
+async function populate(signer: AbstractSigner, tx: TransactionRequest, networkOverrides?: NetworkOverrides): Promise<TransactionLike<string>> {
+    let pop: any = copyRequest(tx, networkOverrides);
 
     if (pop.to != null) { pop.to = resolveAddress(pop.to, signer); }
 
@@ -57,17 +58,33 @@ async function populate(signer: AbstractSigner, tx: TransactionRequest): Promise
  *  Signer-specific methods be overridden.
  *
  */
-export abstract class AbstractSigner<P extends null | Provider = null | Provider> implements Signer {
+export abstract class AbstractSigner<P extends null | Provider = null | Provider, TNetworkOverrides extends NetworkOverrides = {}> implements Signer<TNetworkOverrides> {
     /**
      *  The provider this signer is connected to.
      */
     readonly provider!: P;
 
+    readonly networkOverrides?: TNetworkOverrides;
+
     /**
      *  Creates a new Signer connected to %%provider%%.
      */
-    constructor(provider?: P) {
-        defineProperties<AbstractSigner>(this, { provider: (provider || null) });
+    constructor(provider?: P, networkOverrides?: TNetworkOverrides) {
+        defineProperties<AbstractSigner>(
+            this, 
+            { 
+                provider: (provider || null)
+            }
+        );
+
+        if (networkOverrides) {
+            defineProperties<AbstractSigner>(
+                this, 
+                { 
+                    networkOverrides
+                }
+            );
+        }
     }
 
     /**
@@ -88,14 +105,14 @@ export abstract class AbstractSigner<P extends null | Provider = null | Provider
     }
 
     async populateCall(tx: TransactionRequest): Promise<TransactionLike<string>> {
-        const pop = await populate(this, tx);
+        const pop = await populate(this, tx, this.networkOverrides);
         return pop;
     }
 
     async populateTransaction(tx: TransactionRequest): Promise<TransactionLike<string>> {
         const provider = checkProvider(this, "populateTransaction");
 
-        const pop = await populate(this, tx);
+        const pop = await populate(this, tx, this.networkOverrides);
 
         if (pop.nonce == null) {
             pop.nonce = await this.getNonce("pending");
@@ -208,6 +225,10 @@ export abstract class AbstractSigner<P extends null | Provider = null | Provider
             }
         }
 
+        if (this.networkOverrides && this.networkOverrides.populateTransaction) {
+            return await resolveProperties(this.networkOverrides.populateTransaction(pop));
+        }
+
 //@TOOD: Don't await all over the place; save them up for
 // the end for better batching
         return await resolveProperties(pop);
@@ -226,12 +247,22 @@ export abstract class AbstractSigner<P extends null | Provider = null | Provider
         return await provider.resolveName(name);
     }
 
-    async sendTransaction(tx: TransactionRequest): Promise<TransactionResponse> {
+    async sendTransaction(
+        tx: TNetworkOverrides["populateTransaction"] extends (tx: TransactionRequest) => TransactionLike
+            ? Parameters<TNetworkOverrides["populateTransaction"]>[0]
+            : Parameters<NetworkDefaults["populateTransaction"]>[0]
+    ): Promise<TransactionResponse> {
+
         const provider = checkProvider(this, "sendTransaction");
 
         const pop = await this.populateTransaction(tx);
+
         delete pop.from;
-        const txObj = Transaction.from(pop);
+
+        const txObj = this.networkOverrides && this.networkOverrides.createTransaction
+            ? this.networkOverrides.createTransaction(pop)
+            : Transaction.from(pop);
+        
         return await provider.broadcastTransaction(await this.signTransaction(txObj));
     }
 

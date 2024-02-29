@@ -11,7 +11,7 @@ import type { Signature } from "../crypto/index.js";
 import type { AccessList, AccessListish, TransactionLike } from "../transaction/index.js";
 
 import type { ContractRunner } from "./contracts.js";
-import type { Network } from "./network.js";
+import type { Network, NetworkOverrides } from "./network.js";
 
 
 const BN_0 = BigInt(0);
@@ -323,7 +323,7 @@ export interface PreparedTransactionRequest {
  *  Returns a copy of %%req%% with all properties coerced to their strict
  *  types.
  */
-export function copyRequest(req: TransactionRequest): PreparedTransactionRequest {
+export function copyRequest(req: TransactionRequest, networkOverrides?: NetworkOverrides): PreparedTransactionRequest {
     const result: any = { };
 
     // These could be addresses, ENS names or Addressables
@@ -356,6 +356,13 @@ export function copyRequest(req: TransactionRequest): PreparedTransactionRequest
 
     if ("customData" in req) {
         result.customData = req.customData;
+    }
+
+    if (networkOverrides && networkOverrides.prepareTransactionRequest) {
+        return {
+            ...result,
+            ...networkOverrides.prepareTransactionRequest(req)
+        };
     }
 
     return result;

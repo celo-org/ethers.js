@@ -10,6 +10,7 @@ import type { SigningKey } from "../crypto/index.js";
 import type { TypedDataDomain, TypedDataField } from "../hash/index.js";
 import type { Provider, TransactionRequest } from "../providers/index.js";
 import type { TransactionLike } from "../transaction/index.js";
+import { NetworkOverrides } from "../providers/network.js";
 
 
 /**
@@ -23,7 +24,7 @@ import type { TransactionLike } from "../transaction/index.js";
  *  This class may be of use for those attempting to implement
  *  a minimal Signer.
  */
-export class BaseWallet extends AbstractSigner {
+export class BaseWallet<TNetworkOverrides extends NetworkOverrides = {}> extends AbstractSigner<Provider | null, TNetworkOverrides> {
     /**
      *  The wallet address.
      */
@@ -38,8 +39,8 @@ export class BaseWallet extends AbstractSigner {
      *  If %%provider%% is not specified, only offline methods can
      *  be used.
      */
-    constructor(privateKey: SigningKey, provider?: null | Provider) {
-        super(provider);
+    constructor(privateKey: SigningKey, provider?: null | Provider, networkOverrides?: TNetworkOverrides) {
+        super(provider, networkOverrides);
 
         assertArgument(privateKey && typeof(privateKey.sign) === "function", "invalid private key", "privateKey", "[ REDACTED ]");
 
@@ -86,7 +87,10 @@ export class BaseWallet extends AbstractSigner {
         }
 
         // Build the transaction
-        const btx = Transaction.from(<TransactionLike<string>>tx);
+        const btx = this.networkOverrides && this.networkOverrides.createTransaction
+            ? this.networkOverrides.createTransaction(<TransactionLike<string>>tx)
+            : Transaction.from(<TransactionLike<string>>tx);
+
         btx.signature = this.signingKey.sign(btx.unsignedHash);
 
         return btx.serialized;
