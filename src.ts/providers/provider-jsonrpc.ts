@@ -1299,3 +1299,7 @@ function spelunkMessage(value: any): Array<string> {
     _spelunkMessage(value, result);
     return result;
 }
+
+export const createJsonRpcProvider = <networkOverrides extends NetworkOverrides>(url?: string | FetchRequest, network?: Networkish, options?: JsonRpcApiProviderOptions, networkOverrides?: networkOverrides) => {
+    return new JsonRpcProvider<networkOverrides>(url, network, options, networkOverrides);
+}

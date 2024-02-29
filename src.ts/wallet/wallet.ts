@@ -163,7 +163,6 @@ export class Wallet<TNetworkOverrides extends NetworkOverrides = {}> extends Bas
     }
 }
 
-// TODO networkOverrides should be optional
-export const createWallet = <networkOverrides extends NetworkOverrides>(privateKey: string, provider: Provider, networkOverrides: networkOverrides) => {
-    return new Wallet<typeof networkOverrides>(privateKey, provider, networkOverrides);
+export const createWallet = <networkOverrides extends NetworkOverrides>(privateKey: string, provider: Provider, networkOverrides?: networkOverrides) => {
+    return new Wallet<networkOverrides>(privateKey, provider, networkOverrides);
 }

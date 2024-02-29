@@ -24,7 +24,7 @@ import { NetworkOverrides } from "../providers/network.js";
  *  This class may be of use for those attempting to implement
  *  a minimal Signer.
  */
-export class BaseWallet<TNetworkOverrides extends NetworkOverrides = {}> extends AbstractSigner<null, TNetworkOverrides> {
+export class BaseWallet<TNetworkOverrides extends NetworkOverrides = {}> extends AbstractSigner<Provider | null, TNetworkOverrides> {
     /**
      *  The wallet address.
      */
@@ -40,7 +40,6 @@ export class BaseWallet<TNetworkOverrides extends NetworkOverrides = {}> extends
      *  be used.
      */
     constructor(privateKey: SigningKey, provider?: null | Provider, networkOverrides?: TNetworkOverrides) {
-        // TODO fix provider typing error
         super(provider, networkOverrides);
 
         assertArgument(privateKey && typeof(privateKey.sign) === "function", "invalid private key", "privateKey", "[ REDACTED ]");
